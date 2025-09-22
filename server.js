@@ -59,12 +59,21 @@ function generateSessionId() {
 // Main Vercel serverless function handler
 export default async function handler(req, res) {
   try {
+    // Ensure req and res are properly defined
+    if (!req || !res) {
+      console.error("Request or response object is undefined");
+      return;
+    }
+
+    // Get method safely
+    const method = req.method || 'GET';
+    
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    if (req.method === 'OPTIONS') {
+    if (method === 'OPTIONS') {
       res.status(200).end();
       return;
     }
@@ -72,7 +81,25 @@ export default async function handler(req, res) {
     // Discover available tools
     const tools = await discoverTools();
 
-    if (req.method === "GET") {
+    if (method === "GET") {
+      // For basic GET requests, return server info and available tools
+      res.status(200).json({
+        server: SERVER_NAME,
+        version: "1.0.0",
+        status: "running",
+        tools: tools.map(tool => ({
+          name: tool.definition.function.name,
+          description: tool.definition.function.description
+        })),
+        endpoints: {
+          sse: "GET /?sessionId=<id> for SSE connection",
+          messages: "POST /?sessionId=<id> for sending messages"
+        }
+      });
+      return;
+    }
+
+    if (method === "GET" && req.query && req.query.sessionId) {
       // SSE endpoint
       const sessionId = req.query.sessionId || generateSessionId();
       
@@ -111,12 +138,12 @@ export default async function handler(req, res) {
         res.status(500).json({ error: "Failed to setup SSE connection" });
       }
 
-    } else if (req.method === "POST") {
+    } else if (method === "POST") {
       // Handle POST messages for SSE
-      const sessionId = req.query.sessionId;
+      const sessionId = req.query && req.query.sessionId;
       
       if (!sessionId) {
-        res.status(400).json({ error: "sessionId is required" });
+        res.status(400).json({ error: "sessionId is required for POST requests" });
         return;
       }
 
@@ -135,7 +162,11 @@ export default async function handler(req, res) {
       }
 
     } else {
-      res.status(405).json({ error: "Method not allowed" });
+      res.status(405).json({ 
+        error: "Method not allowed", 
+        method: method,
+        allowed: ["GET", "POST", "OPTIONS"] 
+      });
     }
 
   } catch (error) {
