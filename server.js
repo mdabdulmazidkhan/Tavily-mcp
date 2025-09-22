@@ -1,38 +1,31 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
-// Store active transports and servers
 const transports = {};
 const servers = {};
+const SERVER_NAME = "My MCP Server";
 
-const SERVER_NAME = "My MCP Server"; // replace with your server name
-
-// Function to setup server handlers (replace with your tool discovery logic)
-async function setupServerHandlers(server, tools) {
-  for (const tool of tools) {
-    server.registerTool(tool);
-  }
+// Tools placeholder
+async function discoverTools() {
+  return [];
 }
 
-// Example placeholder for tools discovery
-async function discoverTools() {
-  return []; // replace with your actual tools
+async function setupServerHandlers(server, tools) {
+  for (const tool of tools) server.registerTool(tool);
 }
 
 // Vercel handler
 export default async function handler(req, res) {
-  if (req.method === "GET" && req.url.startsWith("/sse")) {
+  const tools = await discoverTools();
+
+  if (req.method === "GET") {
+    // SSE endpoint
     const server = new Server(
       { name: SERVER_NAME, version: "0.1.0" },
       { capabilities: { tools: {} } }
     );
-
-    server.onerror = (error) => console.error("[Error]", error);
-
-    const tools = await discoverTools();
     await setupServerHandlers(server, tools);
-
-    const transport = new SSEServerTransport("/messages", res);
+    const transport = new SSEServerTransport("/", res); // root path for SSE
     transports[transport.sessionId] = transport;
     servers[transport.sessionId] = server;
 
@@ -43,7 +36,8 @@ export default async function handler(req, res) {
     });
 
     await server.connect(transport);
-  } else if (req.method === "POST" && req.url.startsWith("/messages")) {
+  } else if (req.method === "POST") {
+    // handle messages
     const url = new URL(req.url, http://${req.headers.host});
     const sessionId = url.searchParams.get("sessionId");
     const transport = transports[sessionId];
