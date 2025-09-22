@@ -1,20 +1,24 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
+// Store active transports and servers
 const transports = {};
 const servers = {};
-const SERVER_NAME = "My MCP Server";
+const SERVER_NAME = "My MCP Server"; // Replace with your server name
 
-// Tools placeholder
+// Placeholder function to discover tools (replace with your real tools)
 async function discoverTools() {
   return [];
 }
 
+// Setup server handlers
 async function setupServerHandlers(server, tools) {
-  for (const tool of tools) server.registerTool(tool);
+  for (const tool of tools) {
+    server.registerTool(tool);
+  }
 }
 
-// Vercel handler
+// Vercel serverless function handler
 export default async function handler(req, res) {
   const tools = await discoverTools();
 
@@ -24,11 +28,15 @@ export default async function handler(req, res) {
       { name: SERVER_NAME, version: "0.1.0" },
       { capabilities: { tools: {} } }
     );
+
+    server.onerror = (error) => console.error("[Error]", error);
     await setupServerHandlers(server, tools);
-    const transport = new SSEServerTransport("/", res); // root path for SSE
+
+    const transport = new SSEServerTransport("/", res); // SSE on root path
     transports[transport.sessionId] = transport;
     servers[transport.sessionId] = server;
 
+    // Cleanup when connection closes
     res.on("close", async () => {
       delete transports[transport.sessionId];
       await server.close();
@@ -37,7 +45,7 @@ export default async function handler(req, res) {
 
     await server.connect(transport);
   } else if (req.method === "POST") {
-    // handle messages
+    // Message handling
     const url = new URL(req.url, http://${req.headers.host});
     const sessionId = url.searchParams.get("sessionId");
     const transport = transports[sessionId];
