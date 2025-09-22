@@ -2,10 +2,12 @@
   "name": "postman-mcp-generator-mcp",
   "version": "1.0.0",
   "description": "A simple MCP server with packaged tools",
-  "main": "server.js",
+  "main": "mcpServer.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node mcpServer.js",
+    "dev": "node mcpServer.js --sse",
+    "stdio": "node mcpServer.js",
     "list-tools": "node index.js tools",
     "postman": "node commands/open-postman.js"
   },
@@ -14,7 +16,8 @@
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
-    "open": "^9.1.0"
+    "open": "^9.1.0",
+    "cors": "^2.8.5"
   },
   "engines": {
     "node": ">=16.0.0"
